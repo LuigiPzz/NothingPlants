@@ -383,7 +383,7 @@ fun GrowthDiaryScreen(
                                 }
                                 
                                 // Score Salute AI + Info button
-                                if (rawLog != null && rawLog.aiHealthScore != null) {
+                                if (rawLog != null && (rawLog.aiHealthScore != null || !rawLog.aiNotes.isNullOrBlank())) {
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -394,8 +394,9 @@ fun GrowthDiaryScreen(
                                             .border(0.5.dp, NothingRed.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
                                             .padding(horizontal = 6.dp, vertical = 3.dp)
                                     ) {
+                                        val scoreText = if (rawLog.aiHealthScore != null) "SALUTE: ${rawLog.aiHealthScore}/10" else "DIAGNOSI AI"
                                         Text(
-                                            text = "SALUTE: ${rawLog.aiHealthScore}/10",
+                                            text = scoreText,
                                             fontFamily = NothingFontFamily,
                                             style = MaterialTheme.typography.labelSmall,
                                             color = NothingRed
@@ -613,20 +614,22 @@ fun InfoBottomSheet(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(NothingRed.copy(alpha = 0.1f))
-                        .border(1.dp, NothingRed, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${log.aiHealthScore ?: 0}",
-                        fontFamily = NothingFontFamily,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = NothingRed
-                    )
+                if (log.aiHealthScore != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(NothingRed.copy(alpha = 0.1f))
+                            .border(1.dp, NothingRed, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${log.aiHealthScore}",
+                            fontFamily = NothingFontFamily,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = NothingRed
+                        )
+                    }
                 }
             }
             
