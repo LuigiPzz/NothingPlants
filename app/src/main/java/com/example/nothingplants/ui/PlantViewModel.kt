@@ -611,16 +611,32 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun upsertActiveReminder(plantId: Long, type: String, dueDate: Long): Long {
+        var finalDueDate = dueDate
+        if (type == "FERTILIZING") {
+            val plant = plantDao.getPlantByIdSync(plantId)
+            if (plant != null) {
+                val activeWatering = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, "WATERING")
+                if (activeWatering != null) {
+                    val wateringDays = getIdealDaysForPlantCare(plant, "WATERING", 7)
+                    val wateringIntervalMs = wateringDays * 24L * 60 * 60 * 1000L
+                    if (wateringIntervalMs > 0) {
+                        val diff = dueDate - activeWatering.dueDate
+                        val k = Math.round(diff.toDouble() / wateringIntervalMs)
+                        finalDueDate = activeWatering.dueDate + k * wateringIntervalMs
+                    }
+                }
+            }
+        }
         val existing = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, type)
         return if (existing != null) {
-            val updated = existing.copy(dueDate = dueDate, isCompleted = false)
+            val updated = existing.copy(dueDate = finalDueDate, isCompleted = false)
             reminderDao.updateReminder(updated)
             existing.id
         } else {
             val newReminder = com.example.nothingplants.data.Reminder(
                 plantId = plantId,
                 type = type,
-                dueDate = dueDate,
+                dueDate = finalDueDate,
                 isCompleted = false
             )
             reminderDao.insertReminder(newReminder)

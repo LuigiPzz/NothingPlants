@@ -34,7 +34,40 @@ class ReminderWorker(
         calendar.set(Calendar.MINUTE, 59)
         val endOfDay = calendar.timeInMillis
 
-        val dueReminders = reminderDao.getDueRemindersSync(endOfDay)
+        val dueReminders = reminderDao.getDueRemindersSync(endOfDay).toMutableList()
+
+        if (dueReminders.isNotEmpty()) {
+            val plantIdsWithWatering = dueReminders.filter { it.type == "WATERING" }.map { it.plantId }.toSet()
+            val plantIdsWithFertilizing = dueReminders.filter { it.type == "FERTILIZING" }.map { it.plantId }.toSet()
+            val threeDaysMs = 3 * 24L * 60 * 60 * 1000L
+            val additionalReminders = mutableListOf<com.example.nothingplants.data.Reminder>()
+
+            plantIdsWithWatering.forEach { plantId ->
+                if (!plantIdsWithFertilizing.contains(plantId)) {
+                    val activeFertilizing = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, "FERTILIZING")
+                    if (activeFertilizing != null) {
+                        val wateringRem = dueReminders.first { it.plantId == plantId && it.type == "WATERING" }
+                        if (Math.abs(activeFertilizing.dueDate - wateringRem.dueDate) <= threeDaysMs) {
+                            additionalReminders.add(activeFertilizing)
+                        }
+                    }
+                }
+            }
+
+            plantIdsWithFertilizing.forEach { plantId ->
+                if (!plantIdsWithWatering.contains(plantId)) {
+                    val activeWatering = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, "WATERING")
+                    if (activeWatering != null) {
+                        val fertilizingRem = dueReminders.first { it.plantId == plantId && it.type == "FERTILIZING" }
+                        if (Math.abs(activeWatering.dueDate - fertilizingRem.dueDate) <= threeDaysMs) {
+                            additionalReminders.add(activeWatering)
+                        }
+                    }
+                }
+            }
+
+            dueReminders.addAll(additionalReminders)
+        }
 
         if (dueReminders.isNotEmpty()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
