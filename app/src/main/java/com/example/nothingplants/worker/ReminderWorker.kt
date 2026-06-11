@@ -90,22 +90,31 @@ class ReminderWorker(
             val wateringReminders = dueReminders.filter { it.type == "WATERING" }
             val fertilizingReminders = dueReminders.filter { it.type == "FERTILIZING" }
 
-            val wateringPlants = wateringReminders.mapNotNull { rem ->
-                val plant = plantDao.getPlantByIdSync(rem.plantId)
-                plant?.let { if (it.name.isNotBlank()) it.name else it.species }
-            }.distinct()
+            val wateringPlantIds = wateringReminders.map { it.plantId }.toSet()
+            val fertilizingPlantIds = fertilizingReminders.map { it.plantId }.toSet()
 
-            val fertilizingPlants = fertilizingReminders.mapNotNull { rem ->
-                val plant = plantDao.getPlantByIdSync(rem.plantId)
-                plant?.let { if (it.name.isNotBlank()) it.name else it.species }
-            }.distinct()
+            val bothIds = wateringPlantIds.intersect(fertilizingPlantIds)
+            val onlyWateringIds = wateringPlantIds - bothIds
+            val onlyFertilizingIds = fertilizingPlantIds - bothIds
+
+            fun getPlantName(id: Long): String {
+                val plant = plantDao.getPlantByIdSync(id)
+                return plant?.let { if (it.name.isNotBlank()) it.name else it.species } ?: "Sconosciuta"
+            }
+
+            val bothPlants = bothIds.map { getPlantName(it) }.distinct()
+            val onlyWateringPlants = onlyWateringIds.map { getPlantName(it) }.distinct()
+            val onlyFertilizingPlants = onlyFertilizingIds.map { getPlantName(it) }.distinct()
 
             val textParts = mutableListOf<String>()
-            if (wateringPlants.isNotEmpty()) {
-                textParts.add("Annaffiare: ${wateringPlants.joinToString(", ")}")
+            if (bothPlants.isNotEmpty()) {
+                textParts.add("Annaffiare e concimare: ${bothPlants.joinToString(", ")}")
             }
-            if (fertilizingPlants.isNotEmpty()) {
-                textParts.add("Concimare: ${fertilizingPlants.joinToString(", ")}")
+            if (onlyWateringPlants.isNotEmpty()) {
+                textParts.add("Annaffiare: ${onlyWateringPlants.joinToString(", ")}")
+            }
+            if (onlyFertilizingPlants.isNotEmpty()) {
+                textParts.add("Concimare: ${onlyFertilizingPlants.joinToString(", ")}")
             }
 
             val text = if (textParts.isEmpty()) {
