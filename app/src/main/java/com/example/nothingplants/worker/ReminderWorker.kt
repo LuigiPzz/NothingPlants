@@ -97,7 +97,7 @@ class ReminderWorker(
             val onlyWateringIds = wateringPlantIds - bothIds
             val onlyFertilizingIds = fertilizingPlantIds - bothIds
 
-            fun getPlantName(id: Long): String {
+            suspend fun getPlantName(id: Long): String {
                 val plant = plantDao.getPlantByIdSync(id)
                 return plant?.let { if (it.name.isNotBlank()) it.name else it.species } ?: "Sconosciuta"
             }
