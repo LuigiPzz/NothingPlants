@@ -1518,7 +1518,23 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
                             )
                         )
                     } else {
-                        val proposedDueDate = lastEventTime + days * 24L * 60 * 60 * 1000L
+                        var proposedDueDate = lastEventTime + days * 24L * 60 * 60 * 1000L
+                        
+                        if (type == "FERTILIZING") {
+                            val wateringProposal = proposals.find { it.plantId == plant.id && it.type == "WATERING" }
+                            val wateringDueDate = wateringProposal?.proposedDueDate ?: reminderDao.getActiveReminderForPlantAndTypeSync(plant.id, "WATERING")?.dueDate
+                            if (wateringDueDate != null && wateringDueDate > 0) {
+                                val wateringIntervalDays = wateringProposal?.daysInterval ?: getIdealDaysForPlantCare(plant, "WATERING", 7)
+                                val wateringIntervalMs = wateringIntervalDays * 24L * 60 * 60 * 1000L
+                                if (wateringIntervalMs > 0) {
+                                    val diff = proposedDueDate - wateringDueDate
+                                    var k = Math.round(diff.toDouble() / wateringIntervalMs)
+                                    if (k < 0) k = 0L
+                                    proposedDueDate = wateringDueDate + k * wateringIntervalMs
+                                }
+                            }
+                        }
+
                         val calendarProposed = java.util.Calendar.getInstance().apply {
                             timeInMillis = proposedDueDate
                             set(java.util.Calendar.HOUR_OF_DAY, 0)
