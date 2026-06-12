@@ -610,7 +610,7 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun upsertActiveReminder(plantId: Long, type: String, dueDate: Long): Long {
+    private suspend fun upsertActiveReminder(plantId: Long, type: String, dueDate: Long, skipRealign: Boolean = false): Long {
         var finalDueDate = dueDate
         if (type == "FERTILIZING") {
             val plant = plantDao.getPlantByIdSync(plantId)
@@ -621,14 +621,15 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
                     val wateringIntervalMs = wateringDays * 24L * 60 * 60 * 1000L
                     if (wateringIntervalMs > 0) {
                         val diff = dueDate - activeWatering.dueDate
-                        val k = Math.round(diff.toDouble() / wateringIntervalMs)
+                        var k = Math.round(diff.toDouble() / wateringIntervalMs)
+                        if (k < 0) k = 0L // Evita date passate rispetto all'innaffiatura corrente
                         finalDueDate = activeWatering.dueDate + k * wateringIntervalMs
                     }
                 }
             }
         }
         val existing = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, type)
-        return if (existing != null) {
+        val resultId = if (existing != null) {
             val updated = existing.copy(dueDate = finalDueDate, isCompleted = false)
             reminderDao.updateReminder(updated)
             existing.id
@@ -641,6 +642,14 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
             )
             reminderDao.insertReminder(newReminder)
         }
+
+        if (type == "WATERING" && !skipRealign) {
+            val activeFertilizing = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, "FERTILIZING")
+            if (activeFertilizing != null) {
+                upsertActiveReminder(plantId, "FERTILIZING", activeFertilizing.dueDate, skipRealign = true)
+            }
+        }
+        return resultId
     }
 
     fun getWateringLogs(plantId: Long): Flow<List<WateringLog>> = plantDao.getWateringLogsForPlant(plantId)
