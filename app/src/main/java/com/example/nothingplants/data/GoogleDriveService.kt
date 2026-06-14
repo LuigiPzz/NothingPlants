@@ -103,10 +103,31 @@ class GoogleDriveService(private val context: Context) {
             val createdFile = drive.files().create(metadata, content).execute()
             createdFile.id
         } else {
-            val fileId = fileList.files[0].id
-            drive.files().update(fileId, null, content).execute()
-            fileId
+            fileList.files[0].id
         }
+    }
+
+    suspend fun cleanupObsoletePhotos(account: GoogleSignInAccount, validFilenames: Set<String>) = withContext(Dispatchers.IO) {
+        val drive = getDriveService(account)
+        var pageToken: String? = null
+        do {
+            val result = drive.files().list()
+                .setSpaces("appDataFolder")
+                .setQ("name != 'nothing_plants_backup.json'")
+                .setPageToken(pageToken)
+                .execute()
+                
+            for (file in result.files) {
+                if (!validFilenames.contains(file.name)) {
+                    try {
+                        drive.files().delete(file.id).execute()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            pageToken = result.nextPageToken
+        } while (pageToken != null)
     }
 
     suspend fun downloadFile(account: GoogleSignInAccount, fileId: String, destFile: File) = withContext(Dispatchers.IO) {

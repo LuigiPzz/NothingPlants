@@ -108,6 +108,9 @@ class SyncRepository(private val context: Context) {
         backupObj.put("photoFiles", photosObj)
         
         driveService.uploadSyncFile(account, backupObj.toString())
+        
+        // Pulizia file orfani
+        driveService.cleanupObsoletePhotos(account, photoFilesMap.keys)
     }
 
     suspend fun downloadAndApply(account: GoogleSignInAccount): Result<Int> = runCatching {

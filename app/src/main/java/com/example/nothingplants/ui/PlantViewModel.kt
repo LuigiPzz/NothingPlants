@@ -169,8 +169,11 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun uploadToDrive(account: GoogleSignInAccount, onResult: (Result<Unit>) -> Unit) {
-        viewModelScope.launch {
-            onResult(syncRepository.upload(account))
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob()).launch {
+            val result = syncRepository.upload(account)
+            withContext(Dispatchers.Main) {
+                onResult(result)
+            }
         }
     }
 
