@@ -28,6 +28,9 @@ interface PlantDao {
     @Query("SELECT * FROM watering_logs WHERE plantId = :plantId ORDER BY timestamp DESC")
     fun getWateringLogsForPlant(plantId: Long): Flow<List<WateringLog>>
 
+    @Query("SELECT * FROM watering_logs")
+    fun getAllWateringLogs(): Flow<List<WateringLog>>
+
     @Query("SELECT * FROM watering_logs WHERE id = :id LIMIT 1")
     suspend fun getWateringLogByIdSync(id: Long): WateringLog?
 

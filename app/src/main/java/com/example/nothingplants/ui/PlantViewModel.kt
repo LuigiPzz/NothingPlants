@@ -97,6 +97,30 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
     private val _cloudSyncSummary = MutableStateFlow<SyncSummary?>(null)
     val cloudSyncSummary: StateFlow<SyncSummary?> = _cloudSyncSummary.asStateFlow()
 
+    val localSyncSummary: StateFlow<SyncSummary?> = kotlinx.coroutines.flow.combine(
+        plantDao.getAllPlants(),
+        plantDao.getAllWateringLogs()
+    ) { plants, logs ->
+        var photoCount = 0
+        plants.forEach { 
+            if (it.imageUri != null) {
+                val f = java.io.File(it.imageUri!!)
+                if (f.exists()) photoCount++ 
+            }
+        }
+        logs.forEach { 
+            if (it.imagePath != null) {
+                val f = java.io.File(it.imagePath!!)
+                if (f.exists()) photoCount++ 
+            }
+        }
+        SyncSummary(
+            plantCount = plants.size,
+            photoCount = photoCount,
+            lastSyncTimestamp = 0L
+        )
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), null)
+
     val autoBackupEnabled: StateFlow<Boolean> = preferencesManager.autoBackupFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
 

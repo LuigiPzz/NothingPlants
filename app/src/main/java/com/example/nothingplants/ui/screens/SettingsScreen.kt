@@ -465,6 +465,7 @@ private fun CloudSyncMenuContent(
     
     var account by remember { mutableStateOf(com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(context)) }
     val cloudSummary by viewModel.cloudSyncSummary.collectAsStateWithLifecycle()
+    val localSummary by viewModel.localSyncSummary.collectAsStateWithLifecycle()
     val autoBackup by viewModel.autoBackupEnabled.collectAsStateWithLifecycle()
     val plants by viewModel.allPlants.collectAsStateWithLifecycle()
     
@@ -600,6 +601,23 @@ private fun CloudSyncMenuContent(
                         )
                         Text(
                             text = "${plants.size}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = NothingFontFamily,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Foto in locale:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "${localSummary?.photoCount ?: 0}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = NothingFontFamily,
                             color = MaterialTheme.colorScheme.onBackground
