@@ -595,29 +595,12 @@ private fun CloudSyncMenuContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Piante locali:",
+                            text = "Sincronizzazione Piante:",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "${plants.size}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = NothingFontFamily,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Foto in locale:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "${localSummary?.photoCount ?: 0}",
+                            text = "${cloudSummary?.plantCount ?: 0} / ${localSummary?.plantCount ?: plants.size}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = NothingFontFamily,
                             color = MaterialTheme.colorScheme.onBackground
@@ -629,29 +612,12 @@ private fun CloudSyncMenuContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Piante nel cloud:",
+                            text = "Sincronizzazione Foto:",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "${cloudSummary?.plantCount ?: 0}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = NothingFontFamily,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Foto nel cloud:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "${cloudSummary?.photoCount ?: 0}",
+                            text = "${cloudSummary?.photoCount ?: 0} / ${localSummary?.photoCount ?: 0}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = NothingFontFamily,
                             color = MaterialTheme.colorScheme.onBackground
