@@ -37,10 +37,6 @@ class SyncRepository(private val context: Context) {
                 val f = File(path)
                 if (f.exists()) filesToUpload.add(f)
             }
-            plant.originalImageUri?.let { path ->
-                val f = File(path)
-                if (f.exists()) filesToUpload.add(f)
-            }
         }
         wateringLogs.forEach { log ->
             log.imagePath?.let { path ->
