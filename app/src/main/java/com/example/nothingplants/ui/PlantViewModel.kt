@@ -632,7 +632,7 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
 
     fun scheduleReminder(plantId: Long, type: String, days: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val dueDate = System.currentTimeMillis() + days * 24L * 60 * 60 * 1000L
+            val dueDate = calculateNextDueDate(System.currentTimeMillis(), days)
             upsertActiveReminder(plantId, type, dueDate)
         }
     }
@@ -645,12 +645,11 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
                 val activeWatering = reminderDao.getActiveReminderForPlantAndTypeSync(plantId, "WATERING")
                 if (activeWatering != null) {
                     val wateringDays = getIdealDaysForPlantCare(plant, "WATERING", 7)
-                    val wateringIntervalMs = wateringDays * 24L * 60 * 60 * 1000L
-                    if (wateringIntervalMs > 0) {
-                        val diff = dueDate - activeWatering.dueDate
-                        var k = Math.round(diff.toDouble() / wateringIntervalMs)
-                        if (k < 0) k = 0L // Evita date passate rispetto all'innaffiatura corrente
-                        finalDueDate = activeWatering.dueDate + k * wateringIntervalMs
+                    if (wateringDays > 0) {
+                        val diffDays = calculateDaysDifference(activeWatering.dueDate, dueDate)
+                        var k = Math.round(diffDays.toDouble() / wateringDays).toInt()
+                        if (k < 0) k = 0
+                        finalDueDate = calculateNextDueDate(activeWatering.dueDate, k * wateringDays)
                     }
                 }
             }
@@ -1282,7 +1281,7 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
             val defaultDays = getIdealDaysForPlantCare(plant, logType, if (logType == "WATERING") 7 else 30)
             
             // Aggiorniamo o inseriamo il promemoria attivo
-            val dueDate = System.currentTimeMillis() + defaultDays * 24L * 60 * 60 * 1000L
+            val dueDate = calculateNextDueDate(System.currentTimeMillis(), defaultDays)
             val reminderId = upsertActiveReminder(plant.id, logType, dueDate)
             
             // Inseriamo il log iniziale immediatamente
@@ -1317,7 +1316,7 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
                     
                     if (result != null && result.daysToNext > 0) {
                         val daysToNext = result.daysToNext
-                        val newDueDate = System.currentTimeMillis() + daysToNext * 24L * 60 * 60 * 1000L
+                        val newDueDate = calculateNextDueDate(System.currentTimeMillis(), daysToNext)
                         upsertActiveReminder(plant.id, logType, newDueDate)
                         
                         val savedLog = plantDao.getWateringLogByIdSync(logId)
@@ -1545,19 +1544,18 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
                             )
                         )
                     } else {
-                        var proposedDueDate = lastEventTime + days * 24L * 60 * 60 * 1000L
+                        var proposedDueDate = calculateNextDueDate(lastEventTime, days)
                         
                         if (type == "FERTILIZING") {
                             val wateringProposal = proposals.find { it.plantId == plant.id && it.type == "WATERING" }
                             val wateringDueDate = wateringProposal?.proposedDueDate ?: reminderDao.getActiveReminderForPlantAndTypeSync(plant.id, "WATERING")?.dueDate
                             if (wateringDueDate != null && wateringDueDate > 0) {
                                 val wateringIntervalDays = wateringProposal?.daysInterval ?: getIdealDaysForPlantCare(plant, "WATERING", 7)
-                                val wateringIntervalMs = wateringIntervalDays * 24L * 60 * 60 * 1000L
-                                if (wateringIntervalMs > 0) {
-                                    val diff = proposedDueDate - wateringDueDate
-                                    var k = Math.round(diff.toDouble() / wateringIntervalMs)
-                                    if (k < 0) k = 0L
-                                    proposedDueDate = wateringDueDate + k * wateringIntervalMs
+                                if (wateringIntervalDays > 0) {
+                                    val diffDays = calculateDaysDifference(wateringDueDate, proposedDueDate)
+                                    var k = Math.round(diffDays.toDouble() / wateringIntervalDays).toInt()
+                                    if (k < 0) k = 0
+                                    proposedDueDate = calculateNextDueDate(wateringDueDate, k * wateringIntervalDays)
                                 }
                             }
                         }
@@ -1584,15 +1582,7 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
                                 )
                             )
                         } else {
-                            val calendarActive = java.util.Calendar.getInstance().apply {
-                                timeInMillis = activeReminder.dueDate
-                                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                                set(java.util.Calendar.MINUTE, 0)
-                                set(java.util.Calendar.SECOND, 0)
-                                set(java.util.Calendar.MILLISECOND, 0)
-                            }
-                            
-                            val diffDays = Math.abs(calendarProposed.timeInMillis - calendarActive.timeInMillis) / (24L * 60 * 60 * 1000)
+                            val diffDays = Math.abs(calculateDaysDifference(activeReminder.dueDate, proposedDueDate))
                             if (diffDays >= 1) {
                                 proposals.add(
                                     ReminderProposal(
@@ -2044,6 +2034,36 @@ class PlantViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         return block(key2.trim())
+    }
+
+    private fun calculateNextDueDate(startMillis: Long, daysToAdd: Int): Long {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.timeInMillis = startMillis
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, daysToAdd)
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 8)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
+    }
+
+    private fun calculateDaysDifference(startMillis: Long, endMillis: Long): Int {
+        val calStart = java.util.Calendar.getInstance().apply { 
+            timeInMillis = startMillis
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val calEnd = java.util.Calendar.getInstance().apply { 
+            timeInMillis = endMillis
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val diffMs = calEnd.timeInMillis - calStart.timeInMillis
+        return Math.round(diffMs.toDouble() / (24L * 60 * 60 * 1000L)).toInt()
     }
 }
 
