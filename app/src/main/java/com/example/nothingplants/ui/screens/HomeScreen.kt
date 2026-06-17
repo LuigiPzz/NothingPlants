@@ -418,9 +418,8 @@ fun PlantCard(
         if (reminder == null) {
             "?"
         } else {
-            val diffMs = reminder.dueDate - System.currentTimeMillis()
-            val diffDays = (diffMs / (1000 * 60 * 60 * 24)).toInt()
-            if (diffDays < 0) "0" else diffDays.toString()
+            val diffDays = com.example.nothingplants.utils.DateUtils.getDaysUntil(reminder.dueDate)
+            if (diffDays <= 0) "0" else diffDays.toString()
         }
     }
 

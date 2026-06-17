@@ -377,8 +377,7 @@ fun ReminderItem(
     val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(reminder.dueDate))
     
     val daysUntil = remember(reminder.dueDate, isOverdue) {
-        val diffMs = reminder.dueDate - System.currentTimeMillis()
-        val diffDays = (diffMs / (1000 * 60 * 60 * 24)).toInt()
+        val diffDays = com.example.nothingplants.utils.DateUtils.getDaysUntil(reminder.dueDate)
         if (isOverdue) {
             kotlin.math.abs(diffDays).toString()
         } else {
